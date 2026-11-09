@@ -1,20 +1,20 @@
 # health-connect-mcp
 
 A **read-only MCP server for your Android Health Connect data**, on Cloudflare Workers. Ask Claude about your weight, body
-fat, sleep, steps and more, using whatever your scale and apps write to Health Connect, without going through Fitbit or
-Google Health.
+fat, sleep, steps, nutrition and more, using whatever your scale and apps write to Health Connect. Apps such as Lose It, Tonal,
+Google Fit and smart-scale apps all write there, so their data arrives through one pipe, into your own Cloudflare account.
 
 Health Connect is an on-device store with **no cloud API**, so something on the phone has to push the data out. This repo is the
 other end of that pipe:
 
 ```
-scale / watch / apps ─▶ Health Connect (phone) ─▶ HC Webhook app ─POST /ingest─▶ Worker ─▶ D1 database
+scale / watch / apps ─▶ Health Connect (phone) ─▶ sync app ─POST /ingest─▶ Worker ─▶ D1 database
                                                                                               │
                                Claude (web, desktop, mobile) ──OAuth 2.1──▶ /mcp ─────────────┘
 ```
 
-- `POST /ingest` takes the [HC Webhook](https://github.com/mcnaveen/health-connect-webhook) Android app's JSON, authenticated
-  with its own bearer token, and stores each record in a [D1](https://developers.cloudflare.com/d1/) table keyed by Health
+- `POST /ingest` takes JSON from the companion Android app ([health-connect-sync-android](https://github.com/weissmike/health-connect-sync-android),
+  or the [HC Webhook](https://github.com/mcnaveen/health-connect-webhook) app), authenticated with its own bearer token, and stores each record in a [D1](https://developers.cloudflare.com/d1/) table keyed by Health
   Connect's own record id. Re-syncs, edits and deletions are handled, so there are no duplicates.
 - `/mcp` is the read-only MCP endpoint behind an OAuth 2.1 login, so it works as a custom connector in claude.ai. The static
   owner token also works as a plain bearer for Claude Code.
@@ -52,11 +52,14 @@ You need a Cloudflare account with a domain, Node 22+, an Android phone with Hea
 
 **2. Point the phone at it**
 
-1. Install **HC Webhook** from Google Play (or Obtainium from its GitHub releases).
-2. Grant it Health Connect read access to the data types you want, for example Weight, Body fat, Steps, Sleep.
-3. Add a webhook: URL `https://<your-host>/ingest`, and a custom header `Authorization` with the value `Bearer <INGEST_TOKEN>`.
-4. Choose the data types to send and a sync interval, then run a sync. Menu names may differ between app versions.
-5. Ask Claude to run `get_sync_status`. You should see the record types and the apps that wrote them.
+Option A, a free app you build yourself: [health-connect-sync-android](https://github.com/weissmike/health-connect-sync-android).
+Build and install it, provision the URL and token over USB (so the token is never typed on the phone), grant Health Connect read
+permissions, and tap **Sync now**.
+
+Option B, an existing app: install **HC Webhook** from Google Play, grant it Health Connect read access, add a webhook with URL
+`https://<your-host>/ingest` and a custom header `Authorization: Bearer <INGEST_TOKEN>`, choose the data types, and sync.
+
+Then ask Claude to run `get_sync_status`. You should see the record types and the apps that wrote them.
 
 **3. Connect Claude**: claude.ai, Settings, Connectors, Add custom connector, `https://<host>/mcp`, then paste the owner token on the
 login page. Claude Code: `claude mcp add --transport http health https://<host>/mcp --header "Authorization: Bearer <owner token>"`.
@@ -88,17 +91,16 @@ npm run check          # typecheck + unit tests (pure normalizer)
 
 This project stands on other people's work. Please star and credit them:
 
-- [mcnaveen/health-connect-webhook](https://github.com/mcnaveen/health-connect-webhook) (AGPL-3.0): the Android app that reads Health
-  Connect and posts to the webhook. Not bundled or copied here; it is the recommended companion app, and its payload format is
-  what `/ingest` accepts.
+- [mcnaveen/health-connect-webhook](https://github.com/mcnaveen/health-connect-webhook) (AGPL-3.0): an Android app that reads Health
+  Connect and posts to a webhook. Not bundled or copied here; its published payload format is what `/ingest` accepts, and it works
+  as an alternative sender.
 - [Android Health Connect](https://developer.android.com/health-and-fitness/guides/health-connect): the on-device data platform.
 - [`@cloudflare/workers-oauth-provider`](https://github.com/cloudflare/workers-oauth-provider): the OAuth 2.1 server that makes this a claude.ai connector.
 - [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk): the MCP TypeScript SDK.
 - [Hono](https://hono.dev) for routing, [zod](https://zod.dev) for tool input validation.
 - [Cloudflare Workers](https://developers.cloudflare.com/workers/), [D1](https://developers.cloudflare.com/d1/) and [Wrangler](https://developers.cloudflare.com/workers/wrangler/).
 - Related projects worth knowing: [nachojrs/healthconnect-export](https://github.com/nachojrs/healthconnect-export) and its upstream
-  [kas-cor/healthconnect-export](https://github.com/kas-cor/healthconnect-export) export Health Connect data to JSON and a webhook, and
-  [jatin1322/fitbit-health-mcp](https://github.com/jatin1322/fitbit-health-mcp) (MIT) takes a similar approach with its own hosting.
+  [kas-cor/healthconnect-export](https://github.com/kas-cor/healthconnect-export) export Health Connect data to JSON and a webhook.
 
 Full details in [NOTICE.md](NOTICE.md).
 
