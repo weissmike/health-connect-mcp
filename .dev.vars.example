@@ -1,0 +1,2 @@
+MCP_BEARER=generate-with-openssl-rand-hex-32
+INGEST_TOKEN=generate-another-with-openssl-rand-hex-32

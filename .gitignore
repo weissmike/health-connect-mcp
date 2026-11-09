@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+dist/
+wrangler.local.jsonc
+*.log
+.env
+.env.*
+token*.txt

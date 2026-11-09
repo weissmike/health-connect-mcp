@@ -1,0 +1,15 @@
+{
+  "name": "health-connect-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-12",
+  "observability": { "enabled": true },
+  "workers_dev": false,
+  "preview_urls": false,
+  // Create with: npx wrangler d1 create health-connect   (paste the database_id below)
+  "d1_databases": [{ "binding": "DB", "database_name": "health-connect", "database_id": "<your-d1-id>", "migrations_dir": "migrations" }],
+  // Create with: npx wrangler kv namespace create OAUTH_KV   (paste the id below)
+  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "<your-oauth-kv-id>" }],
+  // Public origin of this Worker; must match the route below.
+  "define": { "__ORIGIN__": "\"https://health.example.com\"" },
+  "routes": [{ "pattern": "health.example.com", "custom_domain": true }]
+}
